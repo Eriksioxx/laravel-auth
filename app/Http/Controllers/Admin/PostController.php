@@ -3,11 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
-use Illuminate\Http\Str;
-
 use App\Post;
-
 class PostController extends Controller
 {
     /**
@@ -17,9 +15,9 @@ class PostController extends Controller
      */
     public function index()
     {
-        //
-        $post = Post::all();
-        return view('admin.posts', compact('posts'));
+        $posts= Post::all();
+        return view('admin.posts.index', compact('posts'));
+
     }
 
     /**
@@ -29,7 +27,6 @@ class PostController extends Controller
      */
     public function create()
     {
-        //
         return view('admin.posts.create');
     }
 
@@ -41,28 +38,35 @@ class PostController extends Controller
      */
     public function store(Request $request)
     {
-        //
-        $request->validate([
-            'title'=>'required|max:250',
-            'content'=>'required',
-        ]);
-        $postData = $request->all();
-        $newPost = new Post();
-        $newPost = fill($postData);
-        $slug = Str::slug($newPost->title);
-
-        $postFound = Post::where('slug', $slug)->first();
-        $counter = 1;
-
-        while($postFound){
-            $alternativeSlug = $slug . '-' . $counter;
-            $counter++;
+        $request->validate(
+            [
+            'title' => 'required|max:255',
+            'content' => 'required|min:8'
+            ],
+            // L'array sottostante equivale ad un messaggio di errore personalizzato,
+            // Lo si può utilizzare per cambiare il soggetto dell'errore es 'name.required' => 'The name field is required.'
+            [
+                'title.required' => 'LoL, you forgot the title.',
+                'content.min' => "C'mon man, you're almost there!",
+                'content.required'=> 'LoL, you also forgot the content.'
+            ]
+        );
+            $postData = $request->all();
+            $newPost = new Post();
+            $newPost->fill($postData);
+            $slug = Str::slug($newPost->title);
+            $alternativeSlug = $slug;
             $postFound = Post::where('slug', $alternativeSlug)->first();
-        }
+            $counter = 1;
+            while($postFound){
+                $alternativeSlug = $slug . '_' . $counter;
+                $counter++;
+                $postFound = Post::where('slug', $alternativeSlug)->first();
+            }
+            $newPost->slug = $alternativeSlug;
+            $newPost->save();
+            return redirect()->route('admin.posts.index');
 
-        $newPost->slug = $alternativeSlug;
-        $newPost->save();
-        return redirect()->route('admin.posts.index');
     }
 
     /**
@@ -73,7 +77,8 @@ class PostController extends Controller
      */
     public function show($id)
     {
-        //
+        $post=Post::find($id);
+        return view('admin.posts.show', compact('post'));
     }
 
     /**
@@ -84,7 +89,8 @@ class PostController extends Controller
      */
     public function edit($id)
     {
-        //
+        $post=Post::find($id);
+        return view('admin.posts.edit', compact('post'));
     }
 
     /**
@@ -94,9 +100,32 @@ class PostController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, Post $post)
     {
-        //
+        $request->validate([
+            'title' => 'required|max:255',
+            'content' => 'required|min:8'
+        ],
+        [
+            'title.required' => 'LoL, you forgot the title.',
+            'content.min' => "C'mon man, you're almost there!",
+            'content.required'=> 'LoL, you also forgot the content.'
+        ]
+        );
+            $postData = $request->all();
+            $post->fill($postData);
+            $slug = Str::slug($post->title);
+            $alternativeSlug = $slug;
+            $postFound = Post::where('slug', $alternativeSlug)->first();
+            $counter = 1;
+            while($postFound){
+                $alternativeSlug = $slug . '_' . $counter;
+                $counter++;
+                $postFound = Post::where('slug', $alternativeSlug)->first();
+            }
+            $post->slug = $alternativeSlug;
+            $post->update();
+            return redirect()->route('admin.posts.index');
     }
 
     /**
@@ -107,6 +136,8 @@ class PostController extends Controller
      */
     public function destroy($id)
     {
-        //
+        $post=Post::find($id);
+        $post->delete();
+        return redirect()->route('admin.posts.index', compact('post')) ;
     }
 }
